@@ -1,0 +1,15 @@
+[submodule "benchmarks/leveldb/leveldb"]
+	path = benchmarks/leveldb/leveldb
+	url = git@github.com:m8/leveldb.git
+	branch = concord
+[submodule "concord-shinjuku"]
+	path = concord-shinjuku
+	url = git@github.com:rishabh246/concord-shinjuku.git
+	branch = concord
+[submodule "schedsim"]
+	path = schedsim
+	url = git@github.com:rishabh246/schedsim.git
+	branch = concord
+[submodule "benchmarks/overhead"]
+	path = benchmarks/overhead
+	url = git@github.com:m8/concord-overhead-bench.git
