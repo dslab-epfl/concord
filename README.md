@@ -19,7 +19,7 @@ Subdirectories have their own README files.
 Clone the repository, please make sure you have cloned via ssh, otherwise the submodules will not be cloned.
 
 ```sh
-git clone --recurse-submodules git@github.com:m8/concord.git
+git clone --recurse-submodules git@github.com:dslab-epfl/concord.git
 cd concord
 ```
 
