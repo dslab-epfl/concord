@@ -25,5 +25,5 @@ figures/fig2/fig2.o
 figures/fig2/log.txt
 figures/fig2/fig2.txt
 
-.out
+*.out
 .clang-format

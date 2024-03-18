@@ -1,6 +1,6 @@
 #!/bin/bash
 
-BENCHS=("looplib" "leveldb")
+BENCHS=("looplib")
 
 for bench in "${BENCHS[@]}"; do
     echo "Running $bench"
