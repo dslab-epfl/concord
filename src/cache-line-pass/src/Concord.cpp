@@ -40,7 +40,7 @@ std::vector<BasicBlock*> nmodBasicBlocks = {};
 std::vector<std::string> visitedFunctions = {};
 std::vector<Loop*> visitedLoops = {};
 
-static cl::opt<long> ci_loopBodyUnrollSize("loop_body_size", cl::desc("Loop body unroll size in number of LLVM instructions"), cl::value_desc("unroll size"), cl::init(200));
+static cl::opt<unsigned> ci_loopBodyUnrollSize("loop_body_size", cl::desc("Loop body unroll size in number of LLVM instructions"), cl::value_desc("unroll size"), cl::init(200));
 static cl::opt<int> ci_enableInstrumentation("c_instrument",
                                              cl::desc("Enable instrumentation"),
                                              cl::value_desc("enable instrumentation"),
@@ -118,6 +118,7 @@ namespace
       errs() << "========== Starting the analysis of the module ========== \n";
       errs() << "> Module Name: " << M.getName() << "\n";
       errs() << "> Enable instrumentation: " << enableInstrumentation << "\n";
+      errs() << "> Size of each loop after unrolling: " << loopBodyUnrollSize << "\n";
       errs() << "> Modified subloops: " << modifiedSubLoops << "\n";
       errs() << "> Disable bounded loops: " << disableBoundedLoops << "\n";
 
