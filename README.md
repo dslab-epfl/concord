@@ -1,7 +1,7 @@
 # Concord: An efficient runtime for microsecond-scale applications
 
 This repository contains the source code for Concord, which was published at [SOSP'23](https://dslab.epfl.ch/pubs/concord.pdf).
-In particular, it contains a) the two LLVM passes used by Concord to automatically instrument applications and b) the implementation of the Concord runtime on the ([Shinjuku](https://github.com/stanford-mast/shinjuku) and dataplane OS.
+In particular, it contains a) the two LLVM passes used by Concord to automatically instrument applications and b) the implementation of the Concord runtime on the [Shinjuku](https://github.com/stanford-mast/shinjuku) dataplane OS.
 
 ## Organization
 
