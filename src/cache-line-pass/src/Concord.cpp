@@ -40,7 +40,7 @@ std::vector<BasicBlock*> nmodBasicBlocks = {};
 std::vector<std::string> visitedFunctions = {};
 std::vector<Loop*> visitedLoops = {};
 
-static cl::opt<unsigned> ci_loopBodyUnrollSize("loop_body_size", cl::desc("Loop body unroll size in number of LLVM instructions"), cl::value_desc("unroll size"), cl::init(200));
+static cl::opt<unsigned> ci_loopBodyUnrollSize("loop_body_size", cl::desc("Loop body unroll size in number of LLVM instructions"), cl::value_desc("unroll size"), cl::init(0));
 static cl::opt<int> ci_enableInstrumentation("c_instrument",
                                              cl::desc("Enable instrumentation"),
                                              cl::value_desc("enable instrumentation"),
@@ -122,109 +122,104 @@ namespace
       errs() << "> Modified subloops: " << modifiedSubLoops << "\n";
       errs() << "> Disable bounded loops: " << disableBoundedLoops << "\n";
 
-      std::vector<Loop*> loops;
-
-      for (auto& F : M)
+      if(enableInstrumentation)
       {
-        // Check annotations
-        if (shouldInstrumentFunc(F))
+        std::vector<Loop*> loops;
+
+        for (auto& F : M)
         {
-          errs() << "> Skipping function: '" << F.getName()
-                 << "' because it has been annotated with concord_skip attribute.\n";
-          continue;
-        }
-        // External function we can skip it ===> like malloc, stdlib funcs
-        if (F.isDeclaration())
-        {
-          errs() << "> This is declaration, skip " << F.getName() << "\n";
-          continue;
-        }
-
-        std::string funcName = F.getName().str();
-        std::string demangledFuncName = funcName;
-
-        int status;
-        char* demangled = abi::__cxa_demangle(demangledFuncName.c_str(), 0, 0, &status);
-        if (status == 0)
-        {
-          demangledFuncName = demangled;
-        }
-
-        if (std::find(visitedFunctions.begin(), visitedFunctions.end(), demangledFuncName) != visitedFunctions.end())
-        {
-          continue;
-        }
-
-        visitedFunctions.push_back(demangledFuncName);
-
-        // Instrument function
-        // instrumentFunction(F, M, demangledFuncName);
-
-        // Get the loop info
-        LoopInfo& LI = getAnalysis<LoopInfoWrapperPass>(F).getLoopInfo();
-        auto& SE = getAnalysis<ScalarEvolutionWrapperPass>(F).getSE();
-
-        for (Loop* loop : LI)
-        {
-          int subLoopCounter = 0;
-
-          std::queue<Loop*> worklist;
-          worklist.push(loop);
-
-          while (!worklist.empty())
+          
+          // Check annotations
+          if (shouldInstrumentFunc(F))
           {
-            Loop* currentLoop = worklist.front();
+            errs() << "> Skipping function: '" << F.getName()
+                  << "' because it has been annotated with concord_skip attribute.\n";
+            continue;
+          }
+          // External function we can skip it ===> like malloc, stdlib funcs
+          if (F.isDeclaration())
+          {
+            errs() << "> This is declaration, skip " << F.getName() << "\n";
+            continue;
+          }
 
-            int cnt = loopBodyUnrollSize / estimateLoopBodySize(currentLoop, LI);
+          std::string funcName = F.getName().str();
+          std::string demangledFuncName = funcName;
 
-            UnrollLoopOptions ULO{
-              .AllowRuntime = true,
-              .AllowExpensiveTripCount = true,
-              .UnrollRemainder = true,
-            };
-            ULO.Count = cnt;
+          int status;
+          char* demangled = abi::__cxa_demangle(demangledFuncName.c_str(), 0, 0, &status);
+          if (status == 0)
+          {
+            demangledFuncName = demangled;
+          }
 
-            AssumptionCache* AC = &getAnalysis<AssumptionCacheTracker>(F).getAssumptionCache(F);
+          if (std::find(visitedFunctions.begin(), visitedFunctions.end(), demangledFuncName) != visitedFunctions.end())
+          {
+            continue;
+          }
 
-            LoopUnrollResult result = UnrollLoop(currentLoop, ULO, &LI, &SE, &getAnalysis<DominatorTreeWrapperPass>(F).getDomTree(), AC, nullptr, true);
+          visitedFunctions.push_back(demangledFuncName);
 
-            if (result == LoopUnrollResult::PartiallyUnrolled)
-            {
-              errs() << "Loop partially unrolled \n";
-            }
-            else if (result == LoopUnrollResult::FullyUnrolled)
-            {
-              errs() << "Loop fully unrolled \n";
-            }
-            else {
-              errs() << "Loop not unrolled \n";
-            }
+          // Instrument function
+          // instrumentFunction(F, M, demangledFuncName);
 
-            worklist.pop();
+          // Get the loop info
+          LoopInfo& LI = getAnalysis<LoopInfoWrapperPass>(F).getLoopInfo();
+          auto& SE = getAnalysis<ScalarEvolutionWrapperPass>(F).getSE();
 
-            if (SE.getSmallConstantTripCount(currentLoop) > 0 && disableBoundedLoops)
-            {
-              continue;
-            }
+          for (Loop* loop : LI) {
+            int subLoopCounter = 0;
 
-            instrumentLoop(currentLoop, F, M, LI, demangledFuncName);
+            std::queue<Loop*> worklist;
+            worklist.push(loop);
 
-            if (modifiedSubLoops != 0)
-            {
-              for (Loop::iterator SL = currentLoop->begin(), SLEnd = currentLoop->end(); SL != SLEnd; ++SL)
-              {
-                if (subLoopCounter < modifiedSubLoops)
-                {
-                  worklist.push(*SL);
-                  subLoopCounter++;
+            while (!worklist.empty()) {
+              Loop* currentLoop = worklist.front();
+
+              int cnt = loopBodyUnrollSize / estimateLoopBodySize(currentLoop, LI);
+
+              UnrollLoopOptions ULO{
+                .AllowRuntime = true,
+                .AllowExpensiveTripCount = true,
+                .UnrollRemainder = true,
+              };
+              ULO.Count = cnt;
+
+              AssumptionCache* AC = &getAnalysis<AssumptionCacheTracker>(F).getAssumptionCache(F);
+
+              LoopUnrollResult result = UnrollLoop(currentLoop, ULO, &LI, &SE, &getAnalysis<DominatorTreeWrapperPass>(F).getDomTree(), AC, nullptr, true);
+
+              if (result == LoopUnrollResult::PartiallyUnrolled) {
+                errs() << "Loop partially unrolled \n";
+              }
+              else if (result == LoopUnrollResult::FullyUnrolled) {
+                errs() << "Loop fully unrolled \n";
+              }
+              else {
+                errs() << "Loop not unrolled \n";
+              }
+
+              worklist.pop();
+
+              if (SE.getSmallConstantTripCount(currentLoop) > 0 && disableBoundedLoops) {
+                continue;
+              }
+
+              instrumentLoop(currentLoop, F, M, LI, demangledFuncName);
+
+              if (modifiedSubLoops != 0) {
+                for (Loop::iterator SL = currentLoop->begin(), SLEnd = currentLoop->end(); SL != SLEnd; ++SL) {
+                  if (subLoopCounter < modifiedSubLoops) {
+                    worklist.push(*SL);
+                    subLoopCounter++;
+                  }
                 }
               }
             }
           }
         }
+        errs() << "> Unique loops: " << loops.size() << "\n";
       }
-
-      errs() << "> Unique loops: " << loops.size() << "\n";
       errs() << "========== Finished the analysis of the module ========== \n";
       errs() << "========== Instrumented with Cache Line Pass ========== \n";
       return true;
